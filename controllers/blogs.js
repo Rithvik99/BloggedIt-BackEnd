@@ -11,6 +11,18 @@ export const getBlogs = async (req, res) => {
     }
 }
 
+export const getBlogBySearch = async (req, res) => {
+    const { searchQuery, tags } = req.query; // get the search query and tags from the request
+    try {
+        const title = new RegExp(searchQuery, 'i'); // create a regular expression for the search query
+        const blogMessages = await BlogMessage.find({ $or: [ { title }, { tags: { $in: tags.split(',') } } ] }); // find all the blog messages that match the search query or the tags
+
+        res.json({ data: blogMessages }); // return the blog messages
+    } catch (error) {
+        res.status(404).json({ message: error.message }); // return error message        
+    }
+}
+
 export const createBlog = async (req, res) => {
     const blog = req.body; // get the body of the request
     const newBlog = new BlogMessage({...blog, creator: req.userId, createdAt: new Date().toISOString()}); // create a new blog message
