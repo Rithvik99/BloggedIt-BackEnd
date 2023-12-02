@@ -13,7 +13,7 @@ export const getBlogs = async (req, res) => {
 
 export const createBlog = async (req, res) => {
     const blog = req.body; // get the body of the request
-    const newBlog = new BlogMessage(blog); // create a new blog message
+    const newBlog = new BlogMessage({...blog, creator: req.userId, createdAt: new Date().toISOString()}); // create a new blog message
     try {
         await newBlog.save(); // save the new blog message
         res.status(201).json(newBlog); // return the new blog message
@@ -46,11 +46,20 @@ export const deleteBlog = async (req, res) => {
 export const likeBlog = async (req, res) => {
     const { id } = req.params; // get the id of the request
 
+    if(!req.userId) return res.json({ message: "Unauthenticated" }); // check if the user is authenticated
+
     if (!mongoose.Types.ObjectId.isValid(id)) return res.status(404).send('No blog with that id'); // check if the id is valid
 
     const blog = await BlogMessage.findById(id); // find the blog message
+    const index = blog.likes.findIndex((id) => id === String(req.userId)); // check if the user has already liked the blog message
 
-    const updatedBlog = await BlogMessage.findByIdAndUpdate(id, { likeCount: blog.likeCount + 1 }, { new: true }); // update the blog message
+    if(index === -1){
+        blog.likes.push(req.userId); // add the user id to the likes array
+    } else{
+        blog.likes = blog.likes.filter((id) => id !== String(req.userId)); // remove the user id from the likes array
+    }
+
+    const updatedBlog = await BlogMessage.findByIdAndUpdate(id, blog, { new: true }); // update the blog message
 
     res.json(updatedBlog); // return the updated blog message
 }
